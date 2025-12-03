@@ -75,7 +75,7 @@ EXIT;
 
 ```sql
 # Импортируем дамп
-mysql -u root -p service_center < dump.sql
+mysql -u root -p service_center < dump/dump.sql
 
 # Проверяем импорт
 mysql -u root -p -e "USE service_center; SHOW TABLES;"
