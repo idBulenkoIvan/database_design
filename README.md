@@ -8,9 +8,10 @@
 </p>
 
 ## <b>Навигация</b>
-1. [Модель данных](#модель-данных)
-2. [Установка](#установка)
-3. [Программируемые объекты](#программируемые-объекты)
+1. [Описание проекта](#проектирование-и-разработка-базы-данных-сервисного-центра)
+2. [Модель данных](#модель-данных)
+3. [Установка](#установка)
+4. [Программируемые объекты](#программируемые-объекты)
 
 ## <b>Модель данных</b>
 
@@ -42,71 +43,71 @@
 ### 1. Клонирование репозитория 
 
 ```bash
-# Клонируйте репозиторий
-git clone https://github.com/ваш-пользователь/database_design.git
+# Клонируем репозиторий
+git clone https://github.com/idBulenkoIvan/database_design.git
 
-# Перейдите в директорию проекта
+# Переходим в директорию проекта
 cd database_design
 
-# Проверьте наличие файлов
+# Проверяем наличие файлов
 ls -la
 ```
 
 ### 2. Создание базы данных
 
 ```bash
-# Подключение к MySQL серверу
+# Подключаемся к MySQL серверу
 mysql -u root -p
 
-# Создание базы данных
+# Создаем базу данных
 CREATE DATABASE IF NOT EXISTS service_center 
 CHARACTER SET utf8mb4 
 COLLATE utf8mb4_unicode_ci;
 
-# Проверка создания
+# Проверяем создание
 SHOW DATABASES;
 
-# Выход из MySQL
+# Выходим из MySQL 
 EXIT;
 ```
 
 ### 3. Импорт структуры данных
 
 ```sql
-# Импорт дампа
+# Импортируем дамп
 mysql -u root -p service_center < dump.sql
 
-# Проверка импорта
+# Проверяем импорт
 mysql -u root -p -e "USE service_center; SHOW TABLES;"
 ```
 
 ### 4. Настройка пользователей и прав доступа
 
 ```sql
-# Создание администратора 
+# Создаем администратора
 CREATE USER '<username>'@'localhost' IDENTIFIED BY '<password>';
 
-# Назначение прав
+# Назначаем права
 GRANT ALL PRIVILEGES ON service_center.* TO 'service_user'@'localhost';
 
-# Создание пользователя только для чтения
+# Создаем пользователя только для чтения
 CREATE USER '<username>'@'localhost' IDENTIFIED BY '<password>';
 GRANT SELECT ON service_center_db.* TO 'report_user'@'localhost';
 
-# Применение изменений прав
+# Применяем изменение прав
 FLUSH PRIVILEGES;
 
-# Проверка пользователей
+# Проверяем пользователей
 SELECT User, Host FROM mysql.user;
 ```
 
 ### 5. Проверка установки 
 
 ```sql
-# Подключение к базе данных
+# Подключаемся к базе данных
 mysql -u <username> -p service_center
 
-# Тестовый запрос
+# Просматриваем список таблиц
 SHOW TABLES;
 ```
 
