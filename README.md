@@ -1,4 +1,4 @@
 # database design
 
-![Описание картинки](shop_log.png)
-![ER-диаграмма](shop_phys.png)
+![Описание картинки](logical.png)
+![ER-диаграмма](physical.png)
