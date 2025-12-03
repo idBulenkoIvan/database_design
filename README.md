@@ -330,7 +330,8 @@ BEGIN
         AND consumption.material_id = NEW.material_id;
 	IF old_amount IS NOT NULL THEN
 		UPDATE consumables
-    SET amount = old_amount + NEW.amount WHERE order_id = NEW.order_id AND consumption.material_id = NEW.material_id;
+    SET amount = old_amount + NEW.amount WHERE consumption.material_id = NEW.material_id
+											   AND order_id = NEW.order_id;
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Duplicate entry detected, old record updated';
 	END IF;
 END$$
