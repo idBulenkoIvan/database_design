@@ -147,50 +147,61 @@ END$$
 DELIMITER ;
 ```
 
-#### 3. 'get_order_status' - Получение статуса некоторого заказа
+#### 3. 'calculate_order_margin' - Расчет прибыли с заказа
 ```sql
-DELIMITER $$
-CREATE FUNCTION get_order_status(order_id INT) RETURNS VARCHAR(20)
+CREATE FUNCTION calculate_order_margin(order_id INT) RETURNS DECIMAL(10, 2)
 READS SQL DATA
 BEGIN
-    DECLARE order_status VARCHAR(20);
-    SELECT status.status_name INTO order_status FROM status
-    JOIN ordering ON ordering.status_id = status.status_id
-    WHERE ordering.order_id = order_id;
-    RETURN order_status;
+    DECLARE materials_cost DECIMAL(10, 2) DEFAULT 0;
+    DECLARE workload_price DECIMAL(10, 2) DEFAULT 0;
+    
+    SELECT COALESCE(SUM(consumption.amount * consumables.material_price), 0) INTO materials_cost FROM consumption 
+    JOIN consumables ON consumption.material_id = consumables.material_id
+    WHERE consumption.order_id = order_id;
+    
+    SELECT COALESCE(SUM(workload.workload_price), 0) INTO workload_price FROM repair 
+    JOIN workload ON repair.workload_id = workload.workload_id
+    WHERE repair.order_id = order_id;
+    
+    RETURN workload_price - materials_cost;
 END$$
-DELIMITER ;
+END$$
 ```
 
-#### 4. 'calculate_manufacturer_technique_count' - Подсчет техники некоторого производителя
+#### 4. 'check_material_availability' - Проверка доступности материалов на складе
 ```sql
-DELIMITER $$
-CREATE FUNCTION get_manufacturer_technique_count(manufacturer_name VARCHAR(50)) RETURNS INT
+CREATE FUNCTION check_material_availability(material_id INT) RETURNS BOOLEAN
 READS SQL DATA
 BEGIN
-    DECLARE total_technique_count INT;
-    SELECT COUNT(technique.technique_id) INTO total_technique_count FROM technique
-    JOIN manufacturer ON manufacturer.manufacturer_id = technique.manufacturer_id
-    WHERE LOWER(manufacturer.manufacturer_name) = LOWER(manufacturer_name);
-    RETURN total_technique_count;
+    DECLARE total_reserved INT;
+    
+    SELECT COALESCE(SUM(consumption.amount), 0) INTO total_reserved FROM consumption
+    JOIN ordering ON consumption.order_id = ordering.order_id
+    WHERE consumption.material_id = material_id
+          AND ordering.status_id IN (3, 4);
+    
+    RETURN (10 - total_reserved) > 0; 
 END$$
-DELIMITER ;
 ```
 
-#### 5. 'get_number_of_active_orders' - Подсчет активных заказов некоторого мастера
+#### 5. 'get_avg_order_cost_by_type' - Расчет средней стоимости заказа по типу техники
 ```sql
-DELIMITER $$
-CREATE FUNCTION get_number_of_active_orders(repairman_name VARCHAR(50)) RETURNS INT
+CREATE FUNCTION get_avg_order_cost_by_type(type_name VARCHAR(50)) RETURNS DECIMAL(10, 2)
 READS SQL DATA
 BEGIN
-    DECLARE number_of_orders INT;
-    SELECT COUNT(ordering.order_id) INTO number_of_orders FROM ordering
-    JOIN repairman ON repairman.repairman_id = ordering.repairman_id
-    WHERE LOWER(repairman.repairman_name) = LOWER(repairman_name) 
-          AND ordering.status_id = 3;
-    RETURN number_of_orders;
+    DECLARE avg_cost DECIMAL(10, 2);
+    
+    SELECT AVG(workload.workload_price + COALESCE(consumables.material_price, 0)) INTO avg_cost FROM ordering
+    JOIN technique ON ordering.technique_id = technique.technique_id
+    JOIN technique_type ON technique.type_id = technique_type.type_id
+    LEFT JOIN repair ON ordering.order_id = repair.order_id
+    LEFT JOIN workload ON repair.workload_id = workload.workload_id
+    LEFT JOIN consumption ON ordering.order_id = consumption.order_id
+    LEFT JOIN consumables ON consumption.material_id = consumables.material_id
+    WHERE LOWER(technique_type.technique_type) = LOWER(type_name);
+    
+    RETURN COALESCE(avg_cost, 0);
 END$$
-DELIMITER ;
 ```
 
 ### Хранимые процедуры  
@@ -232,46 +243,55 @@ END$$
 DELIMITER ;
 ```
 
-#### 3. 'get_order_info' - Получение сводной информации о некотором заказе
+#### 3. 'analyze_repairman_performance' - Анализ эффективности мастеров
 ```sql
-DELIMITER $$
-CREATE PROCEDURE get_order_info(IN order_id INT)
+CREATE PROCEDURE analyze_repairman_performance(IN period_days INT)
 BEGIN
-    SELECT ordering.order_id AS 'Номер заказа', customer.customer_name AS 'Заказчик',
-           technique.technique_name AS 'Техника', status.status_name AS 'Статус'
-    FROM ordering 
-    JOIN customer ON customer.customer_id = ordering.customer_id
-    JOIN technique ON technique.technique_id = ordering.technique_id
-    JOIN status ON status.status_id = ordering.status_id
-    WHERE ordering.order_id = order_id;
+    SELECT repairman.repairman_name, COUNT(DISTINCT ordering.order_id) as total_orders,
+           SUM(workload.workload_price) as total_revenue, AVG(DATEDIFF(ordering.order_complete_date, ordering.order_date)) as avg_completion_days
+    FROM repairman
+    LEFT JOIN ordering ON repairman.repairman_id = ordering.repairman_id
+    LEFT JOIN repair ON ordering.order_id = repair.order_id
+    LEFT JOIN workload ON repair.workload_id = workload.workload_id
+    WHERE ordering.order_date >= DATE_SUB(CURDATE(), INTERVAL period_days DAY)
+    GROUP BY repairman.repairman_id, repairman.repairman_name
+    ORDER BY total_revenue DESC;
 END$$
-DELIMITER ;
 ```
 
-#### 4. 'get_consumables_info' - Получение сводной информации об использованных расходных материалах
+#### 4. 'analyze_popular_services' - Анализ популярности услуг
 ```sql
-DELIMITER $$
-CREATE PROCEDURE get_consumables_info()
+CREATE PROCEDURE analyze_popular_services(IN start_date DATE, IN end_date DATE)
 BEGIN
-    SELECT consumables.material_id AS 'Номер', consumables.material_name AS 'Наименование',
-           consumables.material_price AS 'Стоимость', category.category_name AS 'Категория'
-    FROM consumables
-    JOIN category ON category.category_id = consumables.category_id
-    ORDER BY consumables.material_id ASC;
+    SELECT workload.workload_name, COUNT(repair.order_id) as usage_count,
+           SUM(workload.workload_price) as total_revenue
+    FROM workload
+    LEFT JOIN repair ON workload.workload_id = repair.workload_id
+    LEFT JOIN ordering ON repair.order_id = ordering.order_id
+    WHERE ordering.order_date BETWEEN start_date AND end_date
+    GROUP BY workload.workload_id, workload.workload_name, workload.workload_price
+    ORDER BY usage_count DESC;
 END$$
-DELIMITER ;
 ```
 
-#### 5. 'get_workload_info' - Получение сводной информации о проведенных работах
+#### 5. 'generate_completed_orders_report' - Отчет по завершенным заказам с детализацией
 ```sql
-DELIMITER $$
-CREATE PROCEDURE get_workload_info()
+CREATE PROCEDURE generate_completed_orders_report(IN report_month INT, IN report_year INT)
 BEGIN
-    SELECT workload.workload_id AS 'Номер', workload.workload_name AS 'Услуга',
-           workload.workload_price AS 'Стоимость'
-    FROM workload;
+    SELECT  ordering.order_id, ordering.order_date, ordering.order_complete_date,
+            customer.customer_name, technique.technique_name, repairman.repairman_name,
+            calculate_total_consumables_cost(ordering.order_id) as materials_cost,
+            calculate_total_workload_price(ordering.order_id) as workload_cost,
+            calculate_order_margin(ordering.order_id) as order_margin
+    FROM ordering
+    JOIN customer ON ordering.customer_id = customer.customer_id
+    JOIN technique ON ordering.technique_id = technique.technique_id
+    LEFT JOIN repairman ON ordering.repairman_id = repairman.repairman_id
+    WHERE ordering.status_id = 5
+          AND MONTH(ordering.order_complete_date) = report_month
+          AND YEAR(ordering.order_complete_date) = report_year
+    ORDER BY ordering.order_complete_date DESC;
 END$$
-DELIMITER ;
 ```
 
 ### Триггеры
@@ -349,4 +369,22 @@ BEGIN
     WHERE order_id = NEW.order_id;
 END$$
 DELIMITER ;
+```
+
+#### 6. 'prevent_duplicate_work' - Контроль дублирования работ
+```sql
+CREATE TRIGGER prevent_duplicate_work BEFORE INSERT ON repair
+FOR EACH ROW
+BEGIN
+    DECLARE duplicate_count INT;
+    
+    SELECT COUNT(*) INTO duplicate_countFROM repair
+    WHERE repair.order_id = NEW.order_id 
+          AND repair.workload_id = NEW.workload_id;
+    
+    IF duplicate_count > 0 THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Эта работа уже добавлена в заказ';
+    END IF;
+END$$
 ```
