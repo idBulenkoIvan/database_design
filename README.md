@@ -147,7 +147,7 @@ END$$
 DELIMITER ;
 ```
 
-#### 3. 'calculate_order_margin' - Расчет прибыли с заказа
+#### 3. `calculate_order_margin` - Расчет прибыли с заказа
 ```sql
 CREATE FUNCTION calculate_order_margin(order_id INT) RETURNS DECIMAL(10, 2)
 READS SQL DATA
@@ -168,7 +168,7 @@ END$$
 END$$
 ```
 
-#### 4. 'check_material_availability' - Проверка доступности материалов на складе
+#### 4. `check_material_availability` - Проверка доступности материалов на складе
 ```sql
 CREATE FUNCTION check_material_availability(material_id INT) RETURNS BOOLEAN
 READS SQL DATA
@@ -184,7 +184,7 @@ BEGIN
 END$$
 ```
 
-#### 5. 'get_avg_order_cost_by_type' - Расчет средней стоимости заказа по типу техники
+#### 5. `get_avg_order_cost_by_type` - Расчет средней стоимости заказа по типу техники
 ```sql
 CREATE FUNCTION get_avg_order_cost_by_type(type_name VARCHAR(50)) RETURNS DECIMAL(10, 2)
 READS SQL DATA
@@ -206,7 +206,7 @@ END$$
 
 ### Хранимые процедуры  
 
-#### 1. 'calculate_profit' - Расчет прибыли за некоторый период
+#### 1. `calculate_profit` - Расчет прибыли за некоторый период
 ```sql
 DELIMITER $$
 CREATE PROCEDURE calculate_profit(IN start_date DATE, IN end_date DATE)
@@ -231,7 +231,7 @@ END$$
 DELIMITER ;
 ```
 
-#### 2. 'update_order_status' - Мануальное обновление статуса некоторого заказа
+#### 2. `update_order_status` - Мануальное обновление статуса некоторого заказа
 ```sql
 DELIMITER $$
 CREATE PROCEDURE update_order_status(IN order_id INT)
@@ -243,7 +243,7 @@ END$$
 DELIMITER ;
 ```
 
-#### 3. 'analyze_repairman_performance' - Анализ эффективности мастеров
+#### 3. `analyze_repairman_performance` - Анализ эффективности мастеров
 ```sql
 CREATE PROCEDURE analyze_repairman_performance(IN period_days INT)
 BEGIN
@@ -259,7 +259,7 @@ BEGIN
 END$$
 ```
 
-#### 4. 'analyze_popular_services' - Анализ популярности услуг
+#### 4. `analyze_popular_services` - Анализ популярности услуг
 ```sql
 CREATE PROCEDURE analyze_popular_services(IN start_date DATE, IN end_date DATE)
 BEGIN
@@ -274,7 +274,7 @@ BEGIN
 END$$
 ```
 
-#### 5. 'generate_completed_orders_report' - Отчет по завершенным заказам с детализацией
+#### 5. `generate_completed_orders_report` - Отчет по завершенным заказам с детализацией
 ```sql
 CREATE PROCEDURE generate_completed_orders_report(IN report_month INT, IN report_year INT)
 BEGIN
@@ -296,7 +296,7 @@ END$$
 
 ### Триггеры
 
-#### 1. 'update_order_complete_date' - Автоматическое обновление даты завершения
+#### 1. `update_order_complete_date` - Автоматическое обновление даты завершения
 ```sql
 DELIMITER $$
 CREATE TRIGGER update_order_complete_dateAFTER UPDATE ON ordering
@@ -311,7 +311,7 @@ END$$
 DELIMITER ;
 ```
 
-#### 2. 'update_customer_info' - Синхронизация данных клиента
+#### 2. `update_customer_info` - Синхронизация данных клиента
 ```sql
 DELIMITER $$
 CREATE TRIGGER update_customer_info AFTER INSERT ON ordering
@@ -325,7 +325,7 @@ END$$
 DELIMITER ;
 ```
 
-#### 3. 'update_order_status_after_workload_append' - Автоматический перевод в работу
+#### 3. `update_order_status_after_workload_append` - Автоматический перевод в работу
 ```sql
 DELIMITER $$
 CREATE TRIGGER update_order_status_after_work_added AFTER INSERT ON repair
@@ -338,7 +338,7 @@ END$$
 DELIMITER ;
 ```
 
-#### 4. 'update_consumables_before_insert' - Контроль дублирования расходников
+#### 4. `update_consumables_before_insert` - Контроль дублирования расходников
 ```sql
 DELIMITER $$
 CREATE TRIGGER update_consumables_before_insert BEFORE INSERT ON consumption
@@ -358,7 +358,7 @@ END$$
 DELIMITER ;
 ```
 
-#### 5. 'update_order_status_after_consumables_added' - Статус при добавлении материалов
+#### 5. `update_order_status_after_consumables_added` - Статус при добавлении материалов
 ```sql
 DELIMITER $$
 CREATE TRIGGER update_order_status_after_consumables_added AFTER INSERT ON consumption
@@ -371,7 +371,7 @@ END$$
 DELIMITER ;
 ```
 
-#### 6. 'prevent_duplicate_work' - Контроль дублирования работ
+#### 6. `prevent_duplicate_work` - Контроль дублирования работ
 ```sql
 CREATE TRIGGER prevent_duplicate_work BEFORE INSERT ON repair
 FOR EACH ROW
